@@ -4,6 +4,7 @@ import Control.Applicative
 import Data.Word
 import Numeric
 import Data.List
+import Data.Function
 
 import qualified Data.Set as S
 import qualified Data.ByteString as B
@@ -67,14 +68,6 @@ formatOne g@(g1:_)
       map (("  "++) . mdAssembly) g
 formatOne [] = error "empty gadget"
 
-dedup :: [Candidate] -> [Candidate]
-dedup xs = go xs S.empty
-    where
-        go [] _ = []
-        go (c:cs) seen
-            | (candidateAddress c) `S.member` seen = go cs seen
-            | otherwise  = c : go cs (S.insert (candidateAddress c) seen)
-
 wanted :: [Metadata] -> Bool
 wanted g = all (noStack . mdInst) g && any (rsi . mdInst) g
     -- Customize this to filter for gadgets that have some property
@@ -101,5 +94,7 @@ main =
        when (null args) $
            error "Usage: findROP ELF-FILE"
        elf <- parseElf <$> B.readFile elf_file
-       let gadgets = filter wanted . map toGadget . dedup . findROP $ elf
+       let lift f  = f `on` candidateAddress
+           dedup   = map head . groupBy (lift (==)) . sortBy (lift compare)
+           gadgets = filter wanted . map toGadget . dedup . findROP $ elf
        mapM_ (putStrLn . formatOne) $ gadgets
