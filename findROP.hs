@@ -38,18 +38,11 @@ findROP = concatMap (filter valid . candidates) . execSections
 
 valid :: Candidate -> Bool
 valid (C _ bytes) =
-    case insns of
-        []  -> False
-        [_] -> False
-        _ | any invalid insns -> False
-        _ -> case last insns of
-                 (Inst _ Iret _) -> True
-                 _               -> False
-
-    where
-        insns = disassemble amd64 bytes
-        invalid (Inst _ Iinvalid _) = True
-        invalid _                   = False
+    case disassemble amd64 bytes of
+        insns@(_:_:_)
+            | any ((== Iinvalid) . inOpcode) insns -> False
+            | otherwise -> inOpcode (last insns) == Iret
+        _ -> False
 
 candidates :: ElfSection -> [Candidate]
 candidates sect =
