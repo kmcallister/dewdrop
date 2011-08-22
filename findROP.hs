@@ -6,6 +6,7 @@ import Data.List
 
 import qualified Generics.SYB    as G
 import qualified Data.ByteString as B
+import qualified Data.Set        as S
 
 import Data.Elf
 import Hdis86
@@ -37,24 +38,35 @@ formatOne g@(g1:_)
       map (("  "++) . mdAssembly) g
 formatOne [] = error "empty gadget"
 
-wanted :: [Metadata] -> Bool
-wanted g = valid (map mdInst g) && all (noStack . mdInst) g && any (usesReg RSI . mdInst) g
-    -- Customize this to filter for gadgets that have some property
-    -- you want
+valid :: Gadget -> Bool
+valid = \g -> all ($ g) [(>1) . length, opcodesOk, noStack]
     where
-        valid insns@(_:_:_)
-            | any ((== Iinvalid) . inOpcode) insns
-                = False
-            | otherwise
-                = inOpcode (last insns) == Iret
-        valid _ = False
+        -- scoped outside the lambda, to share evaluation between calls
+        badOpcodes = S.fromList [
+            -- privileged or exception-raising
+              Iinvalid
+            , Iin,  Iinsb,  Iinsw,  Iinsd
+            , Iout, Ioutsb, Ioutsw, Ioutsd
+            , Iiretw, Iiretd, Iiretq
+            , Isysexit, Isysret
+            , Ihlt, Icli, Isti, Illdt, Ilgdt, Ilidt, Iltr
+            , Ivmcall, Ivmresume, Ivmxon, Ivmxoff
+            -- , Ivmlaunch, Ivmread, Ivmwrite,  -- not in udis86?
+            , Ivmptrld, Ivmptrst, Ivmclear
+            , Imonitor, Imwait, Ilmsw, Iinvlpg, Iswapgs
+            , Iclts, Iinvd, Iwbinvd
+            , Irdmsr, Iwrmsr
 
-        usesReg :: (G.Data a) => GPR -> a -> Bool
-        usesReg  r = (not . null) . G.listify (== r)
+            -- stack manipulation
+            , Ipush, Ipusha, Ipushad, Ipushfw, Ipushfd, Ipushfq
+            , Ipop,  Ipopa,  Ipopad,  Ipopfw,  Ipopfd,  Ipopfq
+            , Iret,  Iretf ]
 
-        noStack  (Inst _ Ipush _) = False
-        noStack  (Inst _ Ipop  _) = False
-        noStack  (Inst _ _ operands) = all (not . usesReg RSP) operands
+        opcodesOk g = case reverse $ map (inOpcode . mdInst) g of
+            (Iret : xs) -> all (`S.notMember` badOpcodes) xs
+            _ -> False
+
+        noStack = null . G.listify (== RSP)
 
 main :: IO ()
 main =
@@ -62,5 +74,5 @@ main =
        when (null args) $
            error "Usage: findROP ELF-FILE"
        elf <- parseElf <$> B.readFile elf_file
-       let found = filter wanted . gadgets $ elf
+       let found = filter valid . gadgets $ elf
        mapM_ (putStrLn . formatOne) found
