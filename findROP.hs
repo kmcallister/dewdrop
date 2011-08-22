@@ -4,6 +4,7 @@ import Control.Applicative
 import Numeric
 import Data.List
 
+import qualified Generics.SYB    as G
 import qualified Data.ByteString as B
 
 import Data.Elf
@@ -37,7 +38,7 @@ formatOne g@(g1:_)
 formatOne [] = error "empty gadget"
 
 wanted :: [Metadata] -> Bool
-wanted g = valid (map mdInst g) && all (noStack . mdInst) g && any (rsi . mdInst) g
+wanted g = valid (map mdInst g) && all (noStack . mdInst) g && any (usesReg RSI . mdInst) g
     -- Customize this to filter for gadgets that have some property
     -- you want
     where
@@ -48,20 +49,12 @@ wanted g = valid (map mdInst g) && all (noStack . mdInst) g && any (rsi . mdInst
                 = inOpcode (last insns) == Iret
         valid _ = False
 
+        usesReg :: (G.Data a) => GPR -> a -> Bool
+        usesReg  r = (not . null) . G.listify (== r)
+
         noStack  (Inst _ Ipush _) = False
         noStack  (Inst _ Ipop  _) = False
         noStack  (Inst _ _ operands) = all (not . usesReg RSP) operands
-        usesReg  r (Reg rr)   = usesReg' r rr
-        usesReg  r (Mem (Memory _ base index _ _)) = usesReg' r base || usesReg' r index
-        usesReg  _ _          = False
-        usesReg' r (Reg8  rr _)   = r == rr
-        usesReg' r (Reg16 rr)     = r == rr
-        usesReg' r (Reg32 rr)     = r == rr
-        usesReg' r (Reg64 rr)     = r == rr
-        usesReg' _ _              = False
-        usesMemReg  r (Mem (Memory _ base index _ _)) = usesReg' r base || usesReg' r index
-        usesMemReg  _ _           = False
-        rsi (Inst _ _ operands)   = any (usesMemReg RDI) operands
 
 main :: IO ()
 main =
