@@ -69,10 +69,10 @@ valid = \g -> all ($ g) [(>1) . length, opcodesOk, noStack]
         noStack = null . G.listify (== RSP)
 
 main :: IO ()
-main =
-    do args@(~[elf_file]) <- getArgs
-       when (null args) $
-           error "Usage: findROP ELF-FILE"
-       elf <- parseElf <$> B.readFile elf_file
-       let found = filter valid . gadgets $ elf
-       mapM_ (putStrLn . formatOne) found
+main = do
+    args@(~[elf_file]) <- getArgs
+    when (null args) $
+        error "Usage: findROP ELF-FILE"
+    elf <- parseElf <$> B.readFile elf_file
+    let found = filter valid . gadgets $ elf
+    mapM_ (putStrLn . formatOne) found
