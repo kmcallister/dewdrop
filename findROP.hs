@@ -3,6 +3,7 @@ import Control.Monad
 import Control.Applicative
 import Numeric
 import Data.List
+import Text.Printf
 
 import qualified Data.ByteString as B
 import qualified Data.Set        as S
@@ -34,11 +35,13 @@ gadgets = concatMap scanSect . execSections where
         return (disassembleMetadata cfg subseq)
 
 formatOne :: Gadget -> String
-formatOne g@(g1:_)
-    = showHex (mdOffset g1) $ (":\n" ++) $
-      intercalate "\n" $
-      map (("  "++) . mdAssembly) g
 formatOne [] = error "empty gadget"
+formatOne g@(g1:_)
+    = concat [printf fmt addr, unlines asm, "\n"] where
+        addr = mdOffset g1
+        fmt | addr >= 2^32 = "%016x:\n"
+            | otherwise    = "%08x:\n"
+        asm  = map (("  "++) . mdAssembly) g
 
 valid :: Gadget -> Bool
 valid = \g -> all ($ g) [(>1) . length, opcodesOk]
