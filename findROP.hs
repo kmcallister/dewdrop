@@ -60,9 +60,7 @@ valid = \g -> all ($ g) [(>1) . length, opcodesOk, noStack]
             , Iclts, Iinvd, Iwbinvd
             , Irdmsr, Iwrmsr
 
-            -- stack manipulation
-            , Ipush, Ipusha, Ipushad, Ipushfw, Ipushfd, Ipushfq
-            , Ipop,  Ipopa,  Ipopad,  Ipopfw,  Ipopfd,  Ipopfq
+            -- return before end
             , Iret,  Iretf ]
 
         opcodesOk g = case reverse $ map (inOpcode . mdInst) g of
