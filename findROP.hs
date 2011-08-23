@@ -49,30 +49,29 @@ gadgets = map Gadget . concatMap scanSect . execSections where
         return (disassembleMetadata cfg subseq)
 
 valid :: Gadget -> Bool
-valid = \(Gadget g) -> all ($ g) [(>1) . length, opcodesOk]
-    where
-        -- scoped outside the lambda, to share evaluation between calls
-        badOpcodes = S.fromList [
-            -- privileged or exception-raising
-              Iinvalid
-            , Iin,  Iinsb,  Iinsw,  Iinsd
-            , Iout, Ioutsb, Ioutsw, Ioutsd
-            , Iiretw, Iiretd, Iiretq
-            , Isysexit, Isysret
-            , Ihlt, Icli, Isti, Illdt, Ilgdt, Ilidt, Iltr
-            , Ivmcall, Ivmresume, Ivmxon, Ivmxoff
-            -- , Ivmlaunch, Ivmread, Ivmwrite,  -- not in udis86?
-            , Ivmptrld, Ivmptrst, Ivmclear
-            , Imonitor, Imwait, Ilmsw, Iinvlpg, Iswapgs
-            , Iclts, Iinvd, Iwbinvd
-            , Irdmsr, Iwrmsr
+valid = \(Gadget g) -> all ($ g) [(>1) . length, opcodesOk] where
+    -- scoped outside the lambda, to share evaluation between calls
+    badOpcodes = S.fromList [
+        -- privileged or exception-raising
+          Iinvalid
+        , Iin,  Iinsb,  Iinsw,  Iinsd
+        , Iout, Ioutsb, Ioutsw, Ioutsd
+        , Iiretw, Iiretd, Iiretq
+        , Isysexit, Isysret
+        , Ihlt, Icli, Isti, Illdt, Ilgdt, Ilidt, Iltr
+        , Ivmcall, Ivmresume, Ivmxon, Ivmxoff
+        -- , Ivmlaunch, Ivmread, Ivmwrite,  -- not in udis86?
+        , Ivmptrld, Ivmptrst, Ivmclear
+        , Imonitor, Imwait, Ilmsw, Iinvlpg, Iswapgs
+        , Iclts, Iinvd, Iwbinvd
+        , Irdmsr, Iwrmsr
 
-            -- return before end
-            , Iret,  Iretf ]
+        -- return before end
+        , Iret,  Iretf ]
 
-        opcodesOk g = case reverse $ map (inOpcode . mdInst) g of
-            (Iret : xs) -> all (`S.notMember` badOpcodes) xs
-            _ -> False
+    opcodesOk g = case reverse $ map (inOpcode . mdInst) g of
+        (Iret : xs) -> all (`S.notMember` badOpcodes) xs
+        _ -> False
 
 main :: IO ()
 main = do
