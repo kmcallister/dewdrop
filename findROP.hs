@@ -4,7 +4,6 @@ import Control.Applicative
 import Numeric
 import Data.List
 
-import qualified Generics.SYB    as G
 import qualified Data.ByteString as B
 import qualified Data.Set        as S
 
@@ -42,7 +41,7 @@ formatOne g@(g1:_)
 formatOne [] = error "empty gadget"
 
 valid :: Gadget -> Bool
-valid = \g -> all ($ g) [(>1) . length, opcodesOk, noStack]
+valid = \g -> all ($ g) [(>1) . length, opcodesOk]
     where
         -- scoped outside the lambda, to share evaluation between calls
         badOpcodes = S.fromList [
@@ -66,8 +65,6 @@ valid = \g -> all ($ g) [(>1) . length, opcodesOk, noStack]
         opcodesOk g = case reverse $ map (inOpcode . mdInst) g of
             (Iret : xs) -> all (`S.notMember` badOpcodes) xs
             _ -> False
-
-        noStack = null . G.listify (== RSP)
 
 main :: IO ()
 main = do
