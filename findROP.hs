@@ -19,6 +19,14 @@ import Hdis86
 newtype Gadget = Gadget [Metadata]
     deriving (Eq, Ord, Typeable, Data)
 
+instance Show Gadget where
+    show (Gadget []) = "<empty Gadget>"
+    show (Gadget g@(g1:_)) = printf fmt addr ++ unlines asm where
+        addr = mdOffset g1
+        fmt | addr >= 2^32 = "%016x:\n"
+            | otherwise    = "%08x:\n"
+        asm = map (("  "++) . mdAssembly) g
+
 execSections :: Elf -> [ElfSection]
 execSections = filter ((SHF_EXECINSTR `elem`) . elfSectionFlags) . elfSections
 
@@ -39,15 +47,6 @@ gadgets = map Gadget . concatMap scanSect . execSections where
             cfg  = amd64 { cfgOrigin = addr
                          , cfgSyntax = SyntaxATT }
         return (disassembleMetadata cfg subseq)
-
-formatOne :: Gadget -> String
-formatOne (Gadget []) = error "empty gadget"
-formatOne (Gadget g@(g1:_))
-    = concat [printf fmt addr, unlines asm, "\n"] where
-        addr = mdOffset g1
-        fmt | addr >= 2^32 = "%016x:\n"
-            | otherwise    = "%08x:\n"
-        asm  = map (("  "++) . mdAssembly) g
 
 valid :: Gadget -> Bool
 valid = \(Gadget g) -> all ($ g) [(>1) . length, opcodesOk]
@@ -82,4 +81,4 @@ main = do
         error "Usage: findROP ELF-FILE"
     elf <- parseElf <$> B.readFile elf_file
     let found = filter valid . gadgets $ elf
-    mapM_ (putStrLn . formatOne) found
+    mapM_ print found
