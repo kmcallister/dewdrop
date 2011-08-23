@@ -16,11 +16,14 @@ type Gadget = [Metadata]
 execSections :: Elf -> [ElfSection]
 execSections = filter ((SHF_EXECINSTR `elem`) . elfSectionFlags) . elfSections
 
+rets :: B.ByteString -> [Int]
+rets bs = B.elemIndices 0xC3 bs ++ map (+2) (B.elemIndices 0xC2 bs)
+
 gadgets :: Elf -> [Gadget]
 gadgets = concatMap scanSect . execSections where
     scanSect sect = do
         let bytes = elfSectionData sect
-        index <- B.elemIndices 0xC3 $ bytes
+        index <- rets bytes
         let hd = B.take (index + 1) bytes
             maxCandidate = 20
         subseq <- B.tails $ B.drop (B.length hd - maxCandidate) hd
