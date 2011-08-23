@@ -1,3 +1,5 @@
+{-# LANGUAGE
+    DeriveDataTypeable #-}
 import System.Environment
 import Control.Monad
 import Control.Applicative
@@ -5,13 +7,17 @@ import Numeric
 import Data.List
 import Text.Printf
 
+import Data.Typeable ( Typeable )
+import Data.Data     ( Data )
+
 import qualified Data.ByteString as B
 import qualified Data.Set        as S
 
 import Data.Elf
 import Hdis86
 
-type Gadget = [Metadata]
+newtype Gadget = Gadget [Metadata]
+    deriving (Eq, Ord, Typeable, Data)
 
 execSections :: Elf -> [ElfSection]
 execSections = filter ((SHF_EXECINSTR `elem`) . elfSectionFlags) . elfSections
@@ -20,7 +26,7 @@ rets :: B.ByteString -> [Int]
 rets bs = B.elemIndices 0xC3 bs ++ map (+2) (B.elemIndices 0xC2 bs)
 
 gadgets :: Elf -> [Gadget]
-gadgets = concatMap scanSect . execSections where
+gadgets = map Gadget . concatMap scanSect . execSections where
     scanSect sect = do
         let bytes = elfSectionData sect
         index <- rets bytes
@@ -35,8 +41,8 @@ gadgets = concatMap scanSect . execSections where
         return (disassembleMetadata cfg subseq)
 
 formatOne :: Gadget -> String
-formatOne [] = error "empty gadget"
-formatOne g@(g1:_)
+formatOne (Gadget []) = error "empty gadget"
+formatOne (Gadget g@(g1:_))
     = concat [printf fmt addr, unlines asm, "\n"] where
         addr = mdOffset g1
         fmt | addr >= 2^32 = "%016x:\n"
@@ -44,7 +50,7 @@ formatOne g@(g1:_)
         asm  = map (("  "++) . mdAssembly) g
 
 valid :: Gadget -> Bool
-valid = \g -> all ($ g) [(>1) . length, opcodesOk]
+valid = \(Gadget g) -> all ($ g) [(>1) . length, opcodesOk]
     where
         -- scoped outside the lambda, to share evaluation between calls
         badOpcodes = S.fromList [
