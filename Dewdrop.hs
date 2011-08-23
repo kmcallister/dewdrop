@@ -1,8 +1,16 @@
 {-# LANGUAGE
     DeriveDataTypeable #-}
+module Dewdrop
+    ( Gadget(..)
+    , dewdrop
+    , gadgets, valid
+    , gadgetsWith, Config(..), defaultConfig
+    ) where
+
 import System.Environment
 import Control.Monad
 import Control.Applicative
+import Control.Exception ( throwIO, ErrorCall(..) )
 import Numeric
 import Data.List
 import Text.Printf
@@ -88,11 +96,11 @@ valid = \(Gadget g) -> all ($ g) [(>1) . length, opcodesOk] where
         (Iret : xs) -> all (`S.notMember` badOpcodes) xs
         _ -> False
 
-main :: IO ()
-main = do
-    args@(~[elf_file]) <- getArgs
-    when (null args) $
-        error "Usage: findROP ELF-FILE"
+dewdrop :: (Gadget -> Bool) -> IO ()
+dewdrop wanted = do
+    args@(~(elf_file:_)) <- getArgs
+    when (null args) $ do
+        progname <- getProgName
+        throwIO $ ErrorCall ("Usage: " ++ progname ++ " ELF-FILE")
     elf <- parseElf <$> B.readFile elf_file
-    let found = filter valid . gadgets $ elf
-    mapM_ print found
+    mapM_ print . filter (\g -> valid g && wanted g) . gadgets $ elf
