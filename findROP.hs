@@ -28,12 +28,6 @@ instance Show Gadget where
             | otherwise    = "%08x:\n"
         asm = map (("  "++) . mdAssembly) g
 
-execSections :: Elf -> [ElfSection]
-execSections = filter ((SHF_EXECINSTR `elem`) . elfSectionFlags) . elfSections
-
-rets :: B.ByteString -> [Int]
-rets bs = B.elemIndices 0xC3 bs ++ map (+2) (B.elemIndices 0xC2 bs)
-
 data Config = Config
     { cfgSyntax :: Syntax
     , cfgVendor :: Vendor
@@ -44,7 +38,7 @@ defaultConfig :: Config
 defaultConfig = Config SyntaxATT Intel 20
 
 gadgetsWith :: Config -> Elf -> [Gadget]
-gadgetsWith cfg elf = map Gadget . concatMap scanSect $ execSections elf where
+gadgetsWith cfg elf = map Gadget $ concatMap scanSect exec where
     hcfg = intel32 {
           H.cfgSyntax  = cfgSyntax cfg
         , H.cfgVendor  = cfgVendor cfg
@@ -53,9 +47,12 @@ gadgetsWith cfg elf = map Gadget . concatMap scanSect $ execSections elf where
             ELFCLASS64 -> Mode64
         }
 
+    exec = filter ((SHF_EXECINSTR `elem`) . elfSectionFlags) $ elfSections elf
+
     scanSect sect = do
         let bytes = elfSectionData sect
-        index <- rets bytes
+            idxes = flip B.elemIndices bytes
+        index <- idxes 0xC3 ++ map (+2) (idxes 0xC2)
         let hd = B.take (index + 1) bytes
         subseq <- B.tails $ B.drop (B.length hd - cfgMaxLen cfg) hd
         let addr =   elfSectionAddr sect
