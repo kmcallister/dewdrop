@@ -14,7 +14,8 @@ import qualified Data.ByteString as B
 import qualified Data.Set        as S
 
 import Data.Elf
-import Hdis86
+import Hdis86 hiding ( Config(..) )
+import qualified Hdis86 as H
 
 newtype Gadget = Gadget [Metadata]
     deriving (Eq, Ord, Typeable, Data)
@@ -33,20 +34,37 @@ execSections = filter ((SHF_EXECINSTR `elem`) . elfSectionFlags) . elfSections
 rets :: B.ByteString -> [Int]
 rets bs = B.elemIndices 0xC3 bs ++ map (+2) (B.elemIndices 0xC2 bs)
 
-gadgets :: Elf -> [Gadget]
-gadgets = map Gadget . concatMap scanSect . execSections where
+data Config = Config
+    { cfgSyntax :: Syntax
+    , cfgVendor :: Vendor
+    , cfgMaxLen :: Int
+    } deriving (Eq, Ord, Read, Show, Typeable, Data)
+
+defaultConfig :: Config
+defaultConfig = Config SyntaxATT Intel 20
+
+gadgetsWith :: Config -> Elf -> [Gadget]
+gadgetsWith cfg elf = map Gadget . concatMap scanSect $ execSections elf where
+    hcfg = intel32 {
+          H.cfgSyntax  = cfgSyntax cfg
+        , H.cfgVendor  = cfgVendor cfg
+        , H.cfgCPUMode = case elfClass elf of
+            ELFCLASS32 -> Mode32
+            ELFCLASS64 -> Mode64
+        }
+
     scanSect sect = do
         let bytes = elfSectionData sect
         index <- rets bytes
         let hd = B.take (index + 1) bytes
-            maxCandidate = 20
-        subseq <- B.tails $ B.drop (B.length hd - maxCandidate) hd
+        subseq <- B.tails $ B.drop (B.length hd - cfgMaxLen cfg) hd
         let addr =   elfSectionAddr sect
                    + fromIntegral index
                    - fromIntegral (B.length subseq)
-            cfg  = amd64 { cfgOrigin = addr
-                         , cfgSyntax = SyntaxATT }
-        return (disassembleMetadata cfg subseq)
+        return $ disassembleMetadata (hcfg { H.cfgOrigin = addr }) subseq
+
+gadgets :: Elf -> [Gadget]
+gadgets = gadgetsWith defaultConfig
 
 valid :: Gadget -> Bool
 valid = \(Gadget g) -> all ($ g) [(>1) . length, opcodesOk] where
