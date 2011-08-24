@@ -11,8 +11,6 @@ import System.Environment
 import Control.Monad
 import Control.Applicative
 import Control.Exception ( throwIO, ErrorCall(..) )
-import Numeric
-import Data.List
 import Text.Printf
 
 import Data.Typeable ( Typeable )
