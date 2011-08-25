@@ -37,9 +37,9 @@ instance Show Gadget where
         asm = map (("  "++) . mdAssembly) g
 
 data Config = Config
-    { cfgSyntax :: Syntax
-    , cfgVendor :: Vendor
-    , cfgMaxLen :: Int
+    { cfgSyntax  :: Syntax
+    , cfgVendor  :: Vendor
+    , cfgMaxSize :: Int
     } deriving (Eq, Ord, Read, Show, Typeable, Data)
 
 defaultConfig :: Config
@@ -62,7 +62,7 @@ gadgetsWith cfg elf = map Gadget $ concatMap scanSect exec where
             idxes = flip B.elemIndices bytes
         index <- idxes 0xC3 ++ map (+2) (idxes 0xC2)
         let hd = B.take (index + 1) bytes
-        subseq <- B.tails $ B.drop (B.length hd - cfgMaxLen cfg) hd
+        subseq <- B.tails $ B.drop (B.length hd - cfgMaxSize cfg) hd
         let addr =   elfSectionAddr sect
                    + fromIntegral index
                    - fromIntegral (B.length subseq)
