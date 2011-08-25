@@ -64,7 +64,7 @@ gadgetsWith cfg elf = map Gadget $ concatMap scanSect exec where
         let hd = B.take (index + 1) bytes
         subseq <- B.tails $ B.drop (B.length hd - cfgMaxSize cfg) hd
         let addr =   elfSectionAddr sect
-                   + fromIntegral index
+                   + fromIntegral index + 1
                    - fromIntegral (B.length subseq)
         return $ disassembleMetadata (hcfg { H.cfgOrigin = addr }) subseq
 
