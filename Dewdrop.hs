@@ -30,8 +30,8 @@ instance Show Gadget where
     show (Gadget []) = "<empty Gadget>"
     show (Gadget g@(g1:_)) = printf fmt addr ++ unlines asm where
         addr = mdOffset g1
-        fmt | addr >= 2^32 = "%016x:\n"
-            | otherwise    = "%08x:\n"
+        fmt | addr > 0xffffffff = "%016x:\n"
+            | otherwise         = "%08x:\n"
         asm = map (("  "++) . mdAssembly) g
 
 data Config = Config
