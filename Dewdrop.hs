@@ -96,14 +96,14 @@ valid = \(Gadget g) -> all ($ g) [(>1) . length, opcodesOk] where
         (Iret : xs) -> all (`S.notMember` badOpcodes) xs
         _ -> False
 
-dewdrop :: (Gadget -> Bool) -> IO ()
+dewdrop :: ([Metadata] -> Bool) -> IO ()
 dewdrop wanted = do
     args@(~(elf_file:_)) <- getArgs
     when (null args) $ do
         progname <- getProgName
         throwIO $ ErrorCall ("Usage: " ++ progname ++ " ELF-FILE")
     elf <- parseElf <$> B.readFile elf_file
-    mapM_ print . filter (\g -> valid g && wanted g) . gadgets $ elf
+    mapM_ print . filter (\g@(Gadget xs) -> valid g && wanted xs) . gadgets $ elf
 
 hasSub :: (Typeable a, Eq a, Data b) => a -> b -> Bool
 hasSub x = not . null . G.listify (== x)
