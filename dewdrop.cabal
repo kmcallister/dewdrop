@@ -1,0 +1,31 @@
+name:                dewdrop
+version:             0.1
+license:             BSD3
+license-file:        LICENSE
+synopsis:            FIXME
+category:            Reverse Engineering, Security
+author:              Nelson Elhage <nelhage@nelhage.com>, Keegan McAllister <mcallister.keegan@gmail.com>
+maintainer:          Keegan McAllister <mcallister.keegan@gmail.com>
+homepage:            https://github.com/kmcallister/dewdrop
+build-type:          Simple
+cabal-version:       >=1.6
+description:
+    FIXME
+
+library
+  exposed-modules:
+      Dewdrop
+  ghc-options:       -Wall
+  build-depends:
+      base       >= 3 && < 5
+    , containers >= 0.3
+    , bytestring >= 0.9
+    , hdis86     >= 0.2
+    , elf        >= 0.2
+
+  other-extensions:
+      DeriveDataTypeable
+
+source-repository head
+    type:     git
+    location: git://github.com/kmcallister/dewdrop.git
