@@ -5,6 +5,7 @@ module Dewdrop
     , dewdrop
     , gadgets, valid
     , gadgetsWith, Config(..), defaultConfig
+    , usesRegister, usesSegment
     ) where
 
 import System.Environment
@@ -18,6 +19,7 @@ import Data.Data     ( Data )
 
 import qualified Data.ByteString as B
 import qualified Data.Set        as S
+import qualified Generics.SYB    as G
 
 import Data.Elf
 import Hdis86 hiding ( Config(..) )
@@ -102,3 +104,12 @@ dewdrop wanted = do
         throwIO $ ErrorCall ("Usage: " ++ progname ++ " ELF-FILE")
     elf <- parseElf <$> B.readFile elf_file
     mapM_ print . filter (\g -> valid g && wanted g) . gadgets $ elf
+
+hasSub :: (Typeable a, Eq a, Data b) => a -> b -> Bool
+hasSub x = not . null . G.listify (== x)
+
+usesRegister :: GPR -> Metadata -> Bool
+usesRegister = hasSub
+
+usesSegment :: Segment -> Metadata -> Bool
+usesSegment = hasSub
