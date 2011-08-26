@@ -5,7 +5,7 @@ module Dewdrop
     , dewdrop
     , gadgets, valid
     , gadgetsWith, Config(..), defaultConfig
-    , usesRegister, usesSegment
+    , usesRegister, usesSegment, opcode
     ) where
 
 import System.Environment
@@ -113,3 +113,6 @@ usesRegister = hasSub
 
 usesSegment :: Segment -> Metadata -> Bool
 usesSegment = hasSub
+
+opcode :: Metadata -> Opcode
+opcode = inOpcode . mdInst
