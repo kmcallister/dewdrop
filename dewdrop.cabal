@@ -15,6 +15,7 @@ description:
 library
   exposed-modules:
       Dewdrop
+    , Dewdrop.Analyze
   ghc-options:       -Wall
   build-depends:
       base       >= 3 && < 5
