@@ -2,7 +2,7 @@ name:                dewdrop
 version:             0.1
 license:             BSD3
 license-file:        LICENSE
-synopsis:            FIXME
+synopsis:            Find gadgets for return-oriented programming on x86
 category:            Reverse Engineering, Security
 author:              Nelson Elhage <nelhage@nelhage.com>, Keegan McAllister <mcallister.keegan@gmail.com>
 maintainer:          Keegan McAllister <mcallister.keegan@gmail.com>
@@ -10,7 +10,25 @@ homepage:            https://github.com/kmcallister/dewdrop
 build-type:          Simple
 cabal-version:       >=1.6
 description:
-    FIXME
+    Traditional buffer-overflow attacks work by filling a data buffer with
+    exploit code and then redirecting execution to that buffer.  As a
+    countermeasure, modern operating systems will forbid (by default) the
+    execution of writable memory regions.
+    .
+    Return-oriented programming [1] is an alternative exploitation strategy
+    that works around this restriction.  The exploit payload is built by
+    chaining together short code sequences (\"gadgets\") which are already
+    present in the exploited program, and thus are allowed to be executed.
+    .
+    dewdrop is a Haskell library for finding useful gadgets in 32- and 64-bit
+    x86 ELF binaries.  You can describe the desired gadget properties with a
+    Haskell function, and use the @Dewdrop@ module to make a customized
+    gadget-finder program.  Or you can import @Dewdrop.Analyze@ and integrate
+    this functionality into a larger program.
+    .
+    \[1\] Shacham, Hovav. /The Geometry of Innocent Flesh on the Bone:/
+    /Return-into-libc without Function Calls (on the x86)/. CCS 2007,
+    pages 552-561.
 
 library
   exposed-modules:

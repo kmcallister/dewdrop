@@ -1,0 +1,10 @@
+dewdrop is a Haskell library for finding gadgets for return-oriented
+programming in 32- and 64-bit x86 ELF binaries.
+
+Documentation is hosted at http://hackage.haskell.org/package/dewdrop
+
+To build the documentation yourself, run
+
+  $ cabal configure && cabal haddock --hyperlink-source
+
+This will produce HTML documentation under dist/doc/html/dewdrop.

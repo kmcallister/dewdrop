@@ -1,9 +1,19 @@
 {-# LANGUAGE
     DeriveDataTypeable #-}
+
+-- | Analyze the ROP gadgets in an ELF binary.
+--
+-- Use this module if you need more control, or integration with a larger
+-- program. The module "Dewdrop" provides a simpler way to put together a
+-- standalone gadget finder.
 module Dewdrop.Analyze
-    ( Gadget(..)
+    ( -- * Finding gadgets
+      Gadget(..)
     , gadgets, valid
-    , gadgetsWith, Config(..), defaultConfig
+
+      -- * Configuring the gadget finder
+    , Config(..), defaultConfig
+    , gadgetsWith
     ) where
 
 import Text.Printf
@@ -18,6 +28,10 @@ import Data.Elf
 import Hdis86 hiding ( Config(..) )
 import qualified Hdis86 as H
 
+-- | A sequence of instructions, each with metadata.
+--
+-- The @'Show'@ instance produces assembly code with labeled offsets,
+-- so you can @'print'@ these directly.
 newtype Gadget = Gadget [Metadata]
     deriving (Eq, Ord, Typeable, Data)
 
@@ -29,15 +43,19 @@ instance Show Gadget where
             | otherwise         = "%08x:\n"
         asm = map (("  "++) . mdAssembly) g
 
+-- | Configuration of the gadget finder.
 data Config = Config
-    { cfgSyntax  :: Syntax
-    , cfgVendor  :: Vendor
-    , cfgMaxSize :: Int
+    { cfgSyntax  :: Syntax  -- ^ Assembly syntax for display
+    , cfgVendor  :: Vendor  -- ^ CPU vendor; affects decoding of a
+                            --   few instructions
+    , cfgMaxSize :: Int     -- ^ Maximum size of a gadget, in bytes
     } deriving (Eq, Ord, Read, Show, Typeable, Data)
 
+-- | Default configuration of the gadget finder.
 defaultConfig :: Config
 defaultConfig = Config SyntaxATT Intel 20
 
+-- | Find possible gadgets, using a custom configuration.
 gadgetsWith :: Config -> Elf -> [Gadget]
 gadgetsWith cfg elf = map Gadget $ concatMap scanSect exec where
     hcfg = intel32 {
@@ -61,9 +79,15 @@ gadgetsWith cfg elf = map Gadget $ concatMap scanSect exec where
                    - fromIntegral (B.length subseq)
         return $ disassembleMetadata (hcfg { H.cfgOrigin = addr }) subseq
 
+-- | Find possible gadgets.
+--
+-- You can filter these further using @'valid'@ or other tests.
 gadgets :: Elf -> [Gadget]
 gadgets = gadgetsWith defaultConfig
 
+-- | Rejects gadgets which are probably not useful for return-oriented
+-- programming.  This includes gadgets containing invalid or privileged
+-- instructions.
 valid :: Gadget -> Bool
 valid = \(Gadget g) -> all ($ g) [(>1) . length, opcodesOk] where
     -- scoped outside the lambda, to share evaluation between calls
